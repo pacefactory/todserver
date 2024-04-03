@@ -1,0 +1,15 @@
+
+# Server dependencies
+fastapi			==0.110.*
+uvicorn[standard]	==0.29.*
+starlette		==0.37.*
+pydantic 		==2.6.*
+python-multipart 	==0.0.6
+
+# For making get/post requests to dbserver
+requests 		==2.31.*
+
+# Image manipulation dependencies
+opencv-python-headless 	==4.9.*
+numpy 			==1.*
+

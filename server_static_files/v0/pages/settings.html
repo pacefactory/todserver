@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="description" content="Text-based object detection settings page" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/favicon.ico">
+  
+  <title>TOD - Settings</title>
+</head>
+
+<style>
+
+  body {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+    background: hsl(195, 15%, 30%);
+    color: white;
+    font-family: monospace;
+  }
+
+  h1 {
+    margin-bottom: 4rem;
+  }
+
+  main {
+    display: flex;
+    flex-flow: column nowrap;
+    padding: 0;
+    margin: 0;
+    gap: 3rem;
+  }
+
+  fieldset {
+    display: flex;
+    flex-flow: column nowrap;
+    background-color: rgba(0,0,0,0.15);
+    padding: 2rem 3rem;
+    border-radius: 8px;
+    border: solid 1px black;
+    gap: 1.5rem;
+    justify-content: center;
+  }
+
+  a { 
+    color: white;
+    font-size: 1.5rem;
+  }
+  a:link, a:visited, a:active { text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .page_links {
+    font-size: 1rem;
+  }
+
+  legend {
+    font-size: 1.15rem;
+    text-align: center;
+    font-family: monospace;
+  }
+
+  #dbserver_url_input {
+    min-width: 48ch;
+    text-align: center;
+    font-family: monospace;
+    font-size: 1rem;
+  }
+
+  .labelled_checkbox_holder {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .labelled_checkbox_holder > * {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  ul {
+    display: flex;
+    flex-flow: column nowrap;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  #model_list_ul {
+    gap: 1rem;
+  }
+
+  .model_listing_item {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+  }
+
+  .model_select_btn, .selected_model_btn {
+    user-select: none;
+    width: 100%;
+    padding: 0.5rem;
+    margin-right: 3rem;
+  }
+  
+  .model_select_btn {
+    border: solid 1px rgba(0,0,0, 0);
+    cursor: pointer;
+  }
+
+  .model_select_btn:hover {
+    border: solid 1px white;
+    background-color: rgba(255,255,255,0.1);
+    border-color: white;
+  }
+
+  .selected_model_btn {
+    border: solid 1px orange;
+  }
+
+  .model_delete_btn {
+    width: 12ch;
+    cursor: pointer;
+  }
+
+  .model_delete_btn:disabled {
+    cursor: not-allowed;
+  }
+  
+  .page_link_list_ul {
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .basic_button {
+    cursor: pointer;
+    min-width: 18ch;
+    align-self: center;
+  }
+
+  .row_holder {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-evenly;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .waiting {
+    cursor: wait;
+  }
+
+
+</style>
+
+<body>
+
+  <h1>Settings (<a href="/">Back</a>)</h1>
+
+  <main>
+    
+    <fieldset>  
+      <legend>DBServer URL</legend>
+      <input type="text" id="dbserver_url_input" value="" placeholder="...checking for url...">
+      <button id="update_dbserver_url_btn" class="basic_button">Update</button>
+    </fieldset>
+    
+    <fieldset>  
+      <legend>Model</legend>
+      <div class="row_holder">
+        <div class="labelled_checkbox_holder">
+          <input type="checkbox" id="gpu_toggle_checkbox" name="gpu_toggle_checkbox" checked>
+          <label for="gpu_toggle_checkbox">Use GPU</label>
+        </div>
+      </div>
+      <ul id="model_list_ul"></ul>
+      <button class="basic_button" disabled>Upload</button>
+    </fieldset>
+
+    <fieldset>  
+      <legend>Reference Links</legend>
+      <ul class="page_link_list_ul">
+        <a
+        class="page_links"
+        href="https://github.com/IDEA-Research/GroundingDINO"
+        >
+          Grounding-DINO Home Page
+        </a>
+        <a 
+        class="page_links"
+        href="https://github.com/IDEA-Research/GroundingDINO/releases/tag/v0.1.0-alpha">
+          GDINO Model - Tiny
+        </a>
+        <a
+        class="page_links"
+        href="https://github.com/IDEA-Research/GroundingDINO/releases/tag/v0.1.0-alpha2">
+          GDINO Model - Base
+        </a>
+      </ul>
+    </fieldset>
+    
+  </main>
+
+
+  <script>
+
+    // ------------------------------------------------------------------------------------------------------------------
+  // Server communication
+  
+  const PAGEURLS = {
+    get_dbserver_url: () => "/v0/settings/get-dbserver-url",
+    set_dbserver_url: () => "/v0/settings/set-dbserver-url",
+    get_model_device: () => "/v0/settings/get-model/device",
+    set_model_device: () => "/v0/settings/set-model/device",
+    get_model: () => "/v0/settings/get-model",
+    set_model: () => "/v0/settings/set-model",
+  }
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // DOM
+
+  const ELEM_IDS = {
+    dbserver_url: "dbserver_url_input",
+    update_dbserver_url_btn: "update_dbserver_url_btn",
+    gpu_toggle: "gpu_toggle_checkbox",
+    model_listing: "model_list_ul",
+  }
+  const getelem = (elem_id) => document.getElementById(elem_id);
+
+  // Set up access to DOM elements
+  const DOM = {}
+  for (const [k, id] of Object.entries(ELEM_IDS)) { DOM[k] = getelem(id); }
+
+  // Set up css needed when updating UI elements
+  const PAGECSS = {
+    selected_model_btn: "selected_model_btn",
+    model_btn: "model_select_btn",
+    delete_btn: "model_delete_btn",
+    waiting: "waiting",
+  }
+
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Page setup
+
+  // Set initial page state
+  initial_setup_dbserver_url();
+  initial_setup_device_usage();
+  update_model_listing();
+
+  // Attach UI callbacks
+  DOM.update_dbserver_url_btn.addEventListener("click", set_new_dbserver_url_cb);
+  DOM.gpu_toggle.addEventListener("click", set_device_usage_cb)
+
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // UI callbacks
+
+  async function set_new_dbserver_url_cb() {
+
+    /* Function used to update the dbserver url */
+
+    // Set a new dbserver url based on user input
+    const post_data = {dbserver_url: DOM.dbserver_url.value}
+    const [ok_req, response_json] = await POST_json(PAGEURLS.set_dbserver_url(), post_data);
+    console.log(response_json)
+    if(!ok_req) {
+      console.warn("Failed to update dbserver url!");
+      console.log(response_json);
+      alert("Failed to update dbserver url! Bad server connection?");
+      return;
+    }
+
+    // If we get this far, update the UI just to be sure (should be the same as the input value)
+    const { ok_connection, dbserver_url } = response_json;
+    DOM.dbserver_url.value = dbserver_url
+    if (!ok_connection){
+      alert("Updated the dbserver url, but the new url fails to connect to anything!");
+    }
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  async function set_device_usage_cb(){
+
+    /* Function used to change device usage (cpu vs. gpu) */
+
+    const post_data = {use_gpu: DOM.gpu_toggle.checked, dtype: null}
+    const [ok_req, response_json] = await POST_json(PAGEURLS.set_model_device(), post_data);
+    if(!ok_req) {
+      console.warn("Failed to update device settings!");
+      console.log(response_json);
+      alert("Failed to update device usage! Bad server connection?");
+      return;
+    }
+
+    // Provide feedback about device usage for user
+    const { has_gpu, device, dtype } = response_json;
+    alert(`Using device: ${device}  /  ${dtype}`);
+    console.log("Device Response", response_json);
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  function make_model_select_cb(model_name) {
+
+    /* Function used to create a callback for selecting a model */
+
+    return async function() {
+
+      // Send the selected model to the server
+      const post_data = {dmodel_select: model_name};
+      set_waiting_cursor(true);
+      this.classList.add(PAGECSS.waiting);
+      const [ok_req, response_json] = await POST_json(PAGEURLS.set_model(), post_data);
+      this.classList.remove(PAGECSS.waiting);
+      set_waiting_cursor(false);
+      if(!ok_req) {
+        console.warn("Failed to update model selection!");
+        console.log(response_json);
+        alert("Failed to update model selection! Bad server connection?");
+        return;
+      }
+      
+      // Update the UI to reflect the new model selection
+      update_model_listing();
+    }
+  }
+
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Setup functions
+
+  async function initial_setup_dbserver_url() {
+
+    /* Function used to set the initial dbserver url */
+
+    // Request dbserver url that the server is using
+    const [ok_req_url, url_response_json] = await GET_json(PAGEURLS.get_dbserver_url());
+    if (!ok_req_url) {
+      console.warn("Failed to get dbserver url!");
+      console.log(url_response_json)
+      return;
+    }
+    
+    // If we get this far, we can update the DOM
+    const { ok_connection, dbserver_url } = url_response_json;
+    DOM.dbserver_url.value = dbserver_url
+    if (!ok_connection){
+      alert("DBServer url fails to connect to anything!");
+    }
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  async function initial_setup_device_usage() {
+      
+    /* Function used to set the initial device usage */
+
+    // Request device settings from server
+    const[ok_req_device, device_response_json] = await GET_json(PAGEURLS.get_model_device());
+    if (!ok_req_device) {
+      console.warn("Failed to get device settings!");
+      console.log(device_response_json)
+      return;
+    }
+
+    // Set toggle base on current server settings
+    const { has_gpu, device, dtype } = device_response_json;
+    DOM.gpu_toggle.disabled = !has_gpu;
+    DOM.gpu_toggle.checked = device !== "cpu";
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  async function update_model_listing() {
+
+    /* Function used to set the initial model listing */
+
+    // Request listing of available models + selected model from server
+    const [ok_req_model, model_response_json] = await GET_json(PAGEURLS.get_model());
+    if (!ok_req_model) {
+      console.warn("Failed to get model listing!");
+      console.log(model_response_json);
+      return;
+    }
+
+    // For clarity
+    const {dmodel_select, dmodel_list} = model_response_json;
+
+    // If we get this far, build out the DOM elements to display available models
+    const selected_model = dmodel_select;
+    const model_entries_list = [];
+    for(const model_name of dmodel_list) {
+
+      // We'll use different settings for the selected model listing
+      const is_model_select = model_name === selected_model;
+      const name_btn_class = is_model_select ? PAGECSS.selected_model_btn : PAGECSS.model_btn;
+      const delete_txt = is_model_select ? "(in-use)" : "Delete";
+
+      // Create model entry elements
+      const new_name_btn = document.createElement("div");
+      new_name_btn.classList.add(name_btn_class);
+      new_name_btn.innerText = model_name;
+      if (!is_model_select) {
+        new_name_btn.addEventListener("click", make_model_select_cb(model_name));
+      }
+
+      const new_delete_btn = document.createElement("button");
+      new_delete_btn.classList.add(PAGECSS.delete_btn);
+      new_delete_btn.innerText = delete_txt;
+      new_delete_btn.disabled = true; // Delete not implemented yet
+
+      // Add each model entry to UI listing
+      const new_li = document.createElement("li");
+      new_li.classList.add("model_listing_item");
+      new_li.append(new_name_btn, new_delete_btn);
+      model_entries_list.push(new_li);
+    }
+    DOM.model_listing.replaceChildren(...model_entries_list);
+    
+    return;
+  }
+
+  // ..................................................................................................................
+
+  async function GET_json(url, value_on_error = null, expected_status_code = 200) {
+
+    /* Helper used to handle simple GET requests that return json formatted data */
+
+    // Initialize output
+    let ok_req = false;
+    let response_json = value_on_error;
+
+    try {
+      const raw_response = await fetch(url);
+      if (raw_response.status === expected_status_code) {
+        response_json = await raw_response.json();
+        ok_req = true;
+      }
+
+    } catch {
+      console.warn("GET json failed!", `@ ${url}`);
+      console.log(raw_response)
+    }
+
+    return [ok_req, response_json];
+  }
+
+  // ..................................................................................................................
+
+  async function POST_json(url, data, value_on_error = null, expected_status_code = 201, use_wait_cursor = false) {
+
+    /* Helper used to handle simple POST requests that return json formatted data */
+
+    // Initialize output
+    let ok_req = false;
+    let response_json = value_on_error;
+
+    const post_config = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    };
+
+    if (use_wait_cursor) set_waiting_cursor(true);
+    try {
+      const raw_response = await fetch(url, post_config);
+      if (raw_response.status === expected_status_code) {
+        response_json = await raw_response.json();
+        ok_req = true;
+      }
+
+    } catch {
+      console.warn("POST json failed!", `@ ${url}`);
+      console.log(raw_response)
+    }
+    set_waiting_cursor(false);
+
+    return [ok_req, response_json];
+  }
+
+  function set_waiting_cursor(is_waiting) {
+
+    /* Helper used to set the cursor to waiting or not */
+
+    document.body.style.cursor = is_waiting ? "wait" : "default";
+    return;
+  }
+
+  </script>
+
+</body>
+</html>

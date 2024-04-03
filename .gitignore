@@ -1,0 +1,18 @@
+
+# Potential environment folders
+.venv/
+venv/
+.env/
+env/
+
+# Cache files
+**.pyc
+__pycache__
+.mypy_cache/
+
+# Local file storage
+storage/
+ignore
+
+# Editable install folder (created from setup.py)
+*.egg-info/

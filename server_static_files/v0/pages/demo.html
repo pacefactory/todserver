@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="description" content="Text-based object detection demo page" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/favicon.ico">
+  
+  <title>TOD - Demo</title>
+</head>
+
+<style>
+
+  body {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+    background: hsl(195, 15%, 20%);
+    color: white;
+    font-family: monospace;
+  }
+
+  h1 {
+    margin-bottom: 4rem;
+  }
+
+  main {
+    padding: 0;
+    margin: 0;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  .row_elem {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    gap: 1rem;
+  }
+  .column_elem {
+    display: flex;
+    flex-flow: column nowrap;
+  }
+  .flex_centered {
+    justify-content: center;
+    align-items: center;
+  }
+
+  #data_fields_container {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    align-items: end;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  #camera_dropdown_menu, #snapshot_idx_input {
+    min-width: 22ch;
+    font-family: monospace;
+    text-align: center;
+  }
+  
+  #image_canvas_container {
+    display: grid;
+    grid-template-areas: "shared_area";
+    outline: solid 1px black;
+  }
+  
+  #display_image, #display_canvas {
+    grid-area: shared_area;
+    width: 640;
+    height: 360;
+    touch-action: none;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  #display_image {
+    pointer-events: none;
+  }
+
+  .selector_container {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 1rem;
+    font-family: monospace;
+    font-size: 1.15rem;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .selector_btn {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+    background-color: hsl(40,10%,30%);
+    padding: 1rem;
+    margin: 1rem;
+    cursor: pointer;
+    outline: 1px solid black;
+    min-width: 6ch;
+    min-height: 4ch;
+    color: hsl(0,0%,70%);
+  }
+
+  .selector_btn:hover {
+    filter: brightness(125%);
+  }
+
+  .selector_btn_active {
+    background-color: hsl(30, 70%, 65%);
+    outline-color: white;
+    color: white;
+  }
+
+  .time_taken_span {
+    min-width: 10ch;
+    font-family: monospace;
+  }
+
+  #conf_slider_input {
+    width: 48ch;
+  }
+
+  #conf_slider_label {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: 0.5rem;
+  }
+
+  #conf_text {
+    display: block;
+    font-family: monospace;
+    width: 4ch;
+  }
+
+  #conf_lock {
+    font-family: monospace;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #text_prompt_holder {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 1rem;
+    align-items: center;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    margin-top: 1rem;
+  }
+
+  .text_prompt_input {
+    width: 24ch;
+    padding: 0.5rem;
+    text-align: center;
+    font-family: monospace;
+    font-size: 1.15rem;
+    border: solid 2px hsl(0, 0%, 70%);
+    border-radius: 4px;
+  }
+
+  .text_prompt_input:placeholder-shown {
+    background-color: rgb(40,40,40);
+  }
+
+  #detect_btn {
+    --btncol: hsl(36, 100%, 50%);
+    background-color: rgba(0,0,0,0);
+    border: solid 4px var(--btncol);
+    color:  var(--btncol);
+    border-radius: 4px;
+    font-family: monospace;
+    font-weight: bold;
+    text-transform: lowercase;
+    padding: 0.5rem 2rem;
+    margin-top: 1rem;
+  }
+
+  #detect_btn:hover {
+    background-color: var(--btncol);
+    color: white;
+  }
+
+  #detect_btn:disabled {
+    background-color: transparent;
+    color: var(--btncol);
+    filter: grayscale(100%) brightness(75%);
+    cursor: wait;
+  }
+
+  #footer_div {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  #footer_div div:first-child {
+    justify-content: right;
+  }
+
+  a { color: white; }
+  a:link, a:visited, a:active { text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .hidden_elem {
+    display: none;
+  }
+
+  .waiting_cursor {
+    cursor: wait;
+  }
+
+</style>
+
+<body>
+
+  <h1>Demo (<a href="/">Back</a>)</h1>
+
+  <main>
+
+    <!-- Top row containing camera/snap selection inputs -->
+    <div id="data_fields_container">
+      <div class="column_elem">
+        <label for="camera_dropdown_menu">Camera:</label>
+        <select id="camera_dropdown_menu">
+          <option value="" hidden selected>Select a camera</option>
+        </select>
+      </div>
+      <div class="column_elem">
+        <label for="snapshot_idx_input">Snapshot:</label>
+        <input type="range" id="snapshot_idx_input" min="0" max="1" value="0" disabled/>
+      </div>
+    </div>
+
+    <!-- Main display + canvas overlay -->
+    <div class="row_elem">
+      <div id="image_canvas_container" title="After detections, click to highlight low-confidence bounding boxes">
+        <img id="display_image" />
+        <canvas id="display_canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Section under image, with time taken, confidence threshold & prompt input -->
+    <div id="footer_div">
+      <div><p>Time taken: <span id="time_taken_span">n/a</span></p></div>
+
+      <label id="conf_slider_label" for="conf_slider_input">
+        Detection Confidence:
+        <span id="conf_text">25%</span>
+        <span id="conf_lock" title="Locking prevents the threshold from changing when running detections">
+          [unlocked]
+        </span>
+      </label>
+      <input type="range" id="conf_slider_input" min="0" max="1" step="0.01" value="0.25" />
+
+      <button id="detect_btn">Detect</button>
+
+      <ul id="text_prompt_holder">
+        <input type="text" class="text_prompt_input" value="person" name="prompt_input" />
+      </ul>
+    </div>
+    
+  </main>
+
+
+<script>
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Server communication
+  
+  const PAGEURLS = {
+    get_db_cameras_list: () => `/v0/demo/check-camera-list`,
+    get_snapshot: (camera_select, snap_ems) => `/v0/demo/check-snapshot-image/${camera_select}/${snap_ems}`,
+    get_snapshot_bounding_ems: (camera_select) => `/v0/demo/get-snapshot-bounding-ems/${camera_select}`,
+    get_snapshot_ems_list: (camera_select, min_ems, max_ems) => `/v0/demo/get-snapshot-ems-list/${camera_select}/${min_ems}/${max_ems}`,
+    detect: () => `/v0/detect`,
+  }
+
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // DOM
+
+  const ELEM_IDS = {
+    img: "display_image",
+    canvas: "display_canvas",
+    camera_menu: "camera_dropdown_menu",
+    snap_slider_input: "snapshot_idx_input",
+    text_prompt_holder: "text_prompt_holder",
+    conf_slider_input: "conf_slider_input",
+    conf_text: "conf_text",
+    conf_lock: "conf_lock",
+    detect_btn: "detect_btn",
+    time_taken_text: "time_taken_span",
+  }
+  const getelem = (elem_id) => document.getElementById(elem_id);
+
+  // Set up access to DOM elements
+  const DOM = {}
+  for (const [k, id] of Object.entries(ELEM_IDS)) { DOM[k] = getelem(id); }
+
+  // Set up css needed when updating UI elements
+  const PAGECSS = {
+    text_input: "text_prompt_input",
+    hidden: "hidden_elem",
+    waiting: "waiting_cursor",
+  }
+
+  
+  // ------------------------------------------------------------------------------------------------------------------
+  // Classes
+
+  class SnapSliderUI {
+
+    /* Class used to manage interactions with snapshot slider selector */
+
+    constructor(slider_dom_ref, image_dom_ref, update_delay_ms = 50) {
+      this.slider_dom = slider_dom_ref
+      this.img_dom = image_dom_ref
+      this.delay_ms = update_delay_ms;
+      this.timeout_id = null;
+      
+      // Sometimes js is dumb... Need to do this to be able to access class vars inside callback
+      this.on_change_cb = this.on_change_cb.bind(this);
+      this._prev_value = null
+    }
+
+    attach_event_listeners(){
+      this.slider_dom.addEventListener("input", this.on_change_cb);
+      this.slider_dom.addEventListener("focus", () => {
+        SERVERRESULTS = make_empty_detection_result();
+      });
+    }
+
+    read_snap_ems() {
+      return CAMPARAMS.ems_list[this.slider_dom.value];
+    }
+
+    reset_ui(ems_list) {
+
+      /*
+      Function used to reset/update the snapshot slider UI 
+      when given an ems-list (i.e. the camera changes)
+      */
+
+      // Update slider with new range
+      this.slider_dom.min = 0;
+      this.slider_dom.max = Math.max(ems_list.length - 1, 0);
+      this.slider_dom.value = 0;
+
+      // Disable slider if we get an empty list of ems values
+      const has_no_snaps = ems_list.length === 0;
+      this.slider_dom.disabled = has_no_snaps;
+
+      // Update page UI
+      this.on_change_cb()
+
+      return;
+    }
+
+    on_change_cb() {
+
+      /*
+      Function used to update snapshot image when adjusting snapshot slider
+      Includes a delay to prevent too many requests from being sent
+      */
+
+      // Only allow requests at fixed maximum rate
+      if (this.timeout_id !== null) return;
+      this.timeout_id = setTimeout(() => {
+
+        // Read UI state to make request
+        const snap_idx = this.slider_dom.value;
+        const camera_select = CAMPARAMS.camera_select;
+        const snap_ems = CAMPARAMS.ems_list[snap_idx];
+        this.img_dom.src = PAGEURLS.get_snapshot(camera_select, snap_ems);
+        this._prev_value = snap_idx;
+
+        // Reset ID to indicate we can send another request
+        this.timeout_id = null
+      }, this.delay_ms);
+
+      return
+    }
+  }
+  
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Globals
+  
+  // Globals for drawing detections
+  const CTX = DOM.canvas.getContext("2d");
+  const DEFAULT_WIDTH_PX = 640;
+  const DEFAULT_HEIGHT_PX = 360;
+  
+  // Globals which control detection thresholding
+  let LOWER_CONFIDENCE_BOUND = 0.05;
+  let LOCK_CONFIDENCE_ON_DETECT = false;
+  
+  // Global used to store DOM state, to avoid reading DOM directly
+  const CAMPARAMS = {
+    "camera_select": "no_camera_selected",
+    "ems_list": [],
+  };
+  
+  // Global used to store detection request/results, for visibility in console
+  let POSTDATA = null
+  let SERVERRESULTS = make_empty_detection_result();
+  
+  // Global used to deal with slider UI
+  const SNAPSLIDER = new SnapSliderUI(DOM.snap_slider_input, DOM.img, 50);
+  
+  // Feedback for debugging
+  console.log(`
+  View prompt POST data using (global) variable:
+    POSTDATA
+  
+  View result data using (global) variable:
+    SERVERRESULTS
+  
+  There is a built-in low-confidence threshold used to make requests.
+  This low value tends to give many detections, which can then be filtered
+  for viewing using the confidence slider. However, it can be modified:
+    LOWER_CONFIDENCE_BOUND = ${LOWER_CONFIDENCE_BOUND}
+  `);
+  
+  
+  // ------------------------------------------------------------------------------------------------------------------
+  // Page setup
+  
+  // Set initial image state
+  show_message_image(["Loading"]);
+
+  // Add image update callbacks
+  DOM.img.addEventListener("load", match_canvas_to_image_size);
+  DOM.img.addEventListener("error", () => show_error_image("No dbserver connection?"));
+  
+  // Load initial page state
+  populate_camera_menu().then(on_camera_change_cb);
+  append_new_text_placeholder();
+
+  // Add UI callbacks
+  DOM.camera_menu.addEventListener("change", on_camera_change_cb);
+  DOM.canvas.addEventListener("click", draw_missed_detections_on_click_cb)
+  DOM.conf_slider_input.addEventListener("input", draw_detection_results);
+  DOM.detect_btn.addEventListener("click", make_detect_request);
+  DOM.text_prompt_holder.addEventListener("change", () => {
+    append_new_text_placeholder();
+    remove_empty_text_inputs();
+  });
+  SNAPSLIDER.attach_event_listeners();
+
+  // Toggle detection confidence lock
+  DOM.conf_lock.addEventListener("click", () => {
+    LOCK_CONFIDENCE_ON_DETECT = !LOCK_CONFIDENCE_ON_DETECT;
+    DOM.conf_lock.innerText = LOCK_CONFIDENCE_ON_DETECT ? "[locked]" : "[unlocked]";
+  });
+
+  // Handle page-wide keypress events
+  document.addEventListener("keydown", (e) => {
+    if (e.repeat) return
+
+    // Make detection request on enter key, anywhere on page!
+    // (sort of bad practice, but convenient...)
+    if (e.key === "Enter") {
+      console.log("ENTER PRESSED!")
+      console.log(e)
+      make_detect_request();
+    }
+    
+    // Give snapshot slider focus on left/right arrow keys
+    // -> This makes arrow keys adjust snap timing
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      DOM.snap_slider_input.focus();
+    }
+
+    // Give confidence slider focus on up/down arrow keys
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      DOM.conf_slider_input.focus();
+    }
+  });
+
+
+  // ..................................................................................................................
+
+  function make_one_text_input_ui(placeholder_text = "Add Target") {
+    const new_input = document.createElement("input");
+    new_input.type = "text";
+    new_input.className = PAGECSS.text_input;
+    new_input.placeholder = placeholder_text;
+    new_input.name = "prompt_input"; // Unused, but prevents console warnings
+    return new_input
+  }
+
+  // ..................................................................................................................
+
+  function append_new_text_placeholder() {
+
+    /* Helper used to create new text prompts for adding more targets */
+
+    const text_input_elems = DOM.text_prompt_holder.children;
+    const last_txt_idx = text_input_elems.length - 1;
+    const last_txt_ref = text_input_elems[last_txt_idx];
+    const last_is_not_empty = last_txt_ref.value.trim().length > 0;
+    if (last_is_not_empty) {
+      const new_input = make_one_text_input_ui();
+      DOM.text_prompt_holder.appendChild(new_input);
+    }
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  function remove_empty_text_inputs(exclude_final_entry = true) {
+
+    /* Helper used to remove 'empty' text prompts (except possibly the final one) */
+
+    // Get listing of elements with empty text
+    const txt_inputs = Array.from(DOM.text_prompt_holder.children);
+    const txt_inputs_iter = exclude_final_entry ? txt_inputs.slice(0,-1) : txt_inputs;
+    const elems_to_remove = txt_inputs_iter.filter(elem => elem.value.trim().length === 0);
+
+    // Remove any empty text inputs
+    for (elem of elems_to_remove) {
+      DOM.text_prompt_holder.removeChild(elem);
+    }
+    
+    return;
+  }
+
+  // ..................................................................................................................
+
+  function read_text_prompts() {
+    
+    /* Helper used to read all text prompts from the UI, without including empty prompts */
+
+    const text_inputs = Array.from(DOM.text_prompt_holder.children);
+    const text_values_list = text_inputs.map(elem => elem.value.trim()).filter(txt => txt.length > 0);
+
+    return text_values_list;
+  }
+
+  // ..................................................................................................................
+
+  async function on_camera_change_cb() {
+
+    /* Function used to update/reset the UI when the camera menu selection changes */
+
+    // Record new camera after change and find usable snapshots for display
+    CAMPARAMS.camera_select = DOM.camera_menu.value;
+    CAMPARAMS.ems_list = await get_new_ems_list(CAMPARAMS.camera_select);;
+
+    // Update slider + image displayed for newly selected camera
+    SNAPSLIDER.reset_ui(CAMPARAMS.ems_list);
+
+    // Wipe out any results, so we can't re-render them on new camera image
+    SERVERRESULTS = make_empty_detection_result();
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  async function get_new_ems_list(camera_select, max_allowable_range_sec = 1800) {
+
+    /*
+    Function used to get a (limited) set of snapshot ems values for a given camera
+    Expected to be called any time the camera selection changes
+    */
+
+    // Initialize output
+    const default_min_max_ems = [0,0];
+    const default_ems_list = [];
+
+    // Try to find snapshot bounds for selected camera
+    const bounds_url = PAGEURLS.get_snapshot_bounding_ems(camera_select);
+    const [ok_bounds_req, [min_ems, max_ems] ] = await GET_json(bounds_url, default_min_max_ems);
+    if (!ok_bounds_req) {
+      console.error("Error requesting snapshot bounds! (server down?)");
+    }
+    
+    // Bail if we got a bad ems range
+    const ok_ems = (min_ems > 0) && (max_ems > min_ems);
+    if (!ok_ems) return default_ems_list;
+
+    // Truncate ems request range if needed
+    // (want to limit data request for demo to avoid hammering database)
+    const max_allowable_ems_range = max_allowable_range_sec * 1000;
+    const trunc_min_ems = Math.max(min_ems, max_ems - max_allowable_ems_range);
+
+    // // Request ems list for given range
+    const ems_url = PAGEURLS.get_snapshot_ems_list(camera_select, trunc_min_ems, max_ems);
+    const [ok_ems_req, ems_list] = await GET_json(ems_url, default_ems_list);
+    if (!ok_ems_req) {
+      console.error("Error requesting snapshot ems list! (server down?)");
+    }
+
+    return ems_list;
+  }
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Main initialization function
+
+  async function populate_camera_menu() {
+
+    /* Initial page load function, which sets up camera menu items & initial display image */
+
+    // Get camera listing data from server, so we can generate menu items
+    const default_cameras_list = [];
+    const [ok_req, cameras_list] = await GET_json(PAGEURLS.get_db_cameras_list(), default_cameras_list);
+    if (!ok_req) {
+      console.error("Error requesting camera listing! (server down?)");
+    }
+    
+    // Fill out camera menu dropdown list
+    const camera_menu_items = []
+    for (let camera_name of cameras_list) {
+      const new_camera_item = document.createElement("option");
+      new_camera_item.innerText = camera_name;
+      new_camera_item.value = camera_name;
+      camera_menu_items.push(new_camera_item);
+    }
+    DOM.camera_menu.replaceChildren(...camera_menu_items);
+
+    // Handle case where there are no cameras
+    const no_cameras = (camera_menu_items.length === 0);
+    if (no_cameras) {
+      const no_option = document.createElement("option");
+      no_option.innerText = "< no cameras >";
+      no_option.value = "";
+      no_option.disabled = true;
+      no_option.selected = true;
+      DOM.camera_menu.appendChild(no_option);
+      show_error_image("no cameras in database");
+    }
+
+    return;
+  }
+
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Drawing functions
+
+  function clear_canvas() {
+    CTX.clearRect(0, 0, CTX.canvas.width, CTX.canvas.height);
+  }
+
+  // ..................................................................................................................
+
+  function draw_one_box(box_xywh_norm, label, score, color = "rgb(255,255,0)") {
+
+    /* Function used to draw a single box (given in xc,yc,w,h normalized format) onto the canvas */
+
+    // Convert box coords to pixel values
+    const [x_norm, y_norm, w_norm, h_norm] = box_xywh_norm;
+    const x_px = x_norm * (CTX.canvas.width - 1);
+    const y_px = y_norm * (CTX.canvas.height - 1);
+    const w_px = w_norm * (CTX.canvas.width - 1);
+    const h_px = h_norm * (CTX.canvas.height - 1);
+
+    // Get coords for drawing
+    const x1_px = x_px - w_px / 2;
+    const y1_px = y_px - h_px / 2;
+    const x_label = x1_px + 4;
+    const y_label = y1_px + h_px - 4;
+
+    // Draw a single box onto the canvas
+    CTX.strokeStyle = "black";
+    CTX.lineWidth = 5;
+    CTX.strokeRect(x1_px, y1_px, w_px, h_px);
+    CTX.strokeStyle = color;
+    CTX.lineWidth = 2;
+    CTX.strokeRect(x1_px, y1_px, w_px, h_px);
+
+    // Write label + score into box
+    CTX.fillStyle = color;
+    CTX.font = "12px monospace";
+    CTX.fillText(`${label} (${(100*score).toFixed(0)})`, x_label, y_label);
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  function draw_detection_results() {
+
+    /* Function used to draw all detection results above confidence threshold */
+
+    // Wipe out any previous labels
+    clear_canvas();
+    
+    // Read current confidence threshold & report on slider
+    const conf_threshold = DOM.conf_slider_input.value;
+    DOM.conf_text.innerText = `${Math.round(100*conf_threshold)}%`;
+    
+    const {boxes_xywh_norm, labels, scores} = SERVERRESULTS;
+    for (let i = 0; i < boxes_xywh_norm.length; i++) {
+
+      // Skip low-confidence detections
+      const score = scores[i];
+      if (score > conf_threshold) {
+        const box_xywh_norm = boxes_xywh_norm[i];
+        const label = labels[i];
+        draw_one_box(box_xywh_norm, label, score);
+      }
+    }
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  function draw_missed_detections_on_click_cb(e) {
+
+    /* Function which highlights low-confidence detections around a clicked point */
+
+     // Bail if there are no detection results
+     const no_detections = SERVERRESULTS.boxes_xywh_norm.length === 0;
+    if (no_detections) {
+      return;
+    }
+    
+    // Figure out mouse click position (normalized) on canvas
+    const [x_px, y_px] = [e.offsetX, e.offsetY];
+    const x_norm = x_px / (CTX.canvas.width - 1);
+    const y_norm = y_px / (CTX.canvas.height - 1);
+
+    // Get boxes in tlbr format
+    const boxes_xywh_norm = SERVERRESULTS.boxes_xywh_norm;
+    const boxes_x1y1x2y2_norm = boxes_xywh_norm.map(([x,y,w,h]) => [x-w/2, y-h/2, x+w/2, y+h/2])
+    const box_scores = SERVERRESULTS.scores;
+
+    // Find highest scoring box that contains the click, that isn't already displayed
+    const upper_score_bound = parseFloat(DOM.conf_slider_input.value);
+    const best_box = {idx: null, score: 0};
+    for(let i = 0; i < box_scores.length; i++) {
+
+      // For convenience
+      const box_x1y1x2y2_norm = boxes_x1y1x2y2_norm[i];
+      const score = box_scores[i];
+
+      // Skip over boxes that are already displayed
+      if (score > upper_score_bound) continue;
+
+      // Skip over boxes that don't contain the click
+      const [x1, y1, x2, y2] = box_x1y1x2y2_norm;
+      const is_x_overlap = (x_norm >= x1) && (x_norm <= x2);
+      const is_y_overlap = (y_norm >= y1) && (y_norm <= y2);
+      const is_in_box = is_x_overlap && is_y_overlap;
+      if (!is_in_box) continue;
+
+      // Skip giant boxes
+      const box_area = (x2 - x1) * (y2 - y1);
+      const is_too_big = box_area > 0.5;
+      if (is_too_big) continue;
+
+      // Update best box if we find a better one
+      const best_score = best_box.score;
+      const is_better = score > best_score;
+      if (is_better) {
+        best_box.idx = i;
+        best_box.score = score;
+      }
+    }
+
+    // Bail if we didn't find a box
+    if (best_box.idx === null) {
+      console.log("No box found!");
+      alert("No detections found at click location!")
+      return;
+    }
+
+    // Draw box onto canvas
+    const best_box_xywh_norm = boxes_xywh_norm[best_box.idx];
+    const best_box_label = SERVERRESULTS.labels[best_box.idx];
+    const best_box_score = box_scores[best_box.idx];
+    const color = "#ff006e"//"rgb(255,0,0)"
+    draw_one_box(best_box_xywh_norm, best_box_label, best_box_score, color);
+
+    // Extra feedback for hard-to-read results
+    const score_pct_str = `${Math.round(100*best_box_score)}%`
+    console.log(`(${best_box.idx})`, "Best detection @ mouse click:", best_box_label, score_pct_str);
+
+    return;
+  }
+
+  // ------------------------------------------------------------------------------------------------------------------
+  // Misc functions
+
+  function enable_detect_button(enable = true) {
+    DOM.detect_btn.disabled = !enable;
+  }
+
+  // ..................................................................................................................
+
+  function make_empty_detection_result() {
+
+    /* Helper used to clear global result state */
+
+    const empty_results = {
+      text_prompt: null,
+      boxes_xywh_norm: [],
+      labels: [],
+      scores: [],
+      time_taken_ms: 0,
+    };
+
+    return empty_results;
+  }
+
+  // ..................................................................................................................
+
+  async function make_detect_request() {
+      
+      /* Function used to make a detection request to the server */
+  
+      // Set up request data
+      const camera_select = CAMPARAMS.camera_select;
+      const text_prompts_list = read_text_prompts();
+      const snap_ems = SNAPSLIDER.read_snap_ems();
+      
+      // Bail if there is no text prompt!
+      if (text_prompts_list.length === 0) {
+        alert("Cannot run detection, no text prompt!");
+        return;
+      }
+
+      // Bundle post data. Store in global for visibility in console
+      POSTDATA = {
+        camera_select: camera_select,
+        snapshot_ems: snap_ems,
+        text_prompts_list: text_prompts_list,
+        box_confidence: LOWER_CONFIDENCE_BOUND,
+        text_confidence: 1.0,
+      }
+      const config_for_post = {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(POSTDATA),
+      }
+
+      // Make request to server, with attempt to parse json
+      enable_detect_button(false);
+      const response = await fetch_with_indicator(PAGEURLS.detect(), config_for_post);
+      enable_detect_button(true);
+
+      let response_json = null;
+      let ok_resp = false;
+      try {
+        response_json = await response.json();
+        ok_resp = true;
+      } catch {
+        console.error("Error parsing detection response!");
+      }
+
+      // Warn if we don't get the expected status code
+      const ok_response = (response.status === 200);
+      if (!ok_response) {
+        console.error("Detection request error!", response);
+        console.error("Error response:", response_json);
+        alert("Error requesting detection!");
+      } else {
+
+        // Write out time taken
+        DOM.time_taken_text.innerText = `${response_json.time_taken_ms} ms`;
+
+        // Update confidence slider to match highest detection confidence
+        if (!LOCK_CONFIDENCE_ON_DETECT) {
+          const max_detection_conf = Math.max(...response_json.scores.map(s => Math.round(100*s)));
+          DOM.conf_slider_input.value = Math.max(1, (max_detection_conf - 10)) / 100.0;
+        }
+
+        // Store results in global for visibility in console
+        SERVERRESULTS = response_json;
+        draw_detection_results();
+
+        // Special case warning if there were no detections
+        if (response_json.scores.length === 0) {
+          alert("No detections!");
+        }
+      }
+  
+      return [ok_resp, response_json];
+  }
+
+  // ..................................................................................................................
+
+  function match_canvas_to_image_size() {
+
+    /*
+    Helper used to make sure the image & overlayed canvas are the same size, this
+    is important for making sure the masking outlines are consistent with the displayed image!
+    */
+
+    const {width, height} = DOM.img.getBoundingClientRect();
+    DOM.canvas.width = width;
+    DOM.canvas.height = height;
+    DOM.canvas.style.width = width;
+    DOM.canvas.style.height = height;
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  function show_message_image(messages_list = ["No image loaded!", "Please wait..."]) {
+
+    /* Function which creates an image with text messages for feedback */
+
+    // Draw error image into canvas
+    const [w, h] = [DEFAULT_WIDTH_PX, DEFAULT_HEIGHT_PX];
+    CTX.canvas.width = w;
+    CTX.canvas.height = h;
+    
+    // Set text properties
+    CTX.font = "32px monospace";
+    CTX.textAlign = "center";
+    CTX.textBaseline = "middle";
+    
+    // Draw error message onto canvas
+    CTX.fillStyle = "black";
+    CTX.fillRect(0, 0, w ,h);
+    CTX.fillStyle = "red";
+    for (let [idx, txt] of messages_list.entries()) {
+      const y_offset = (idx - (messages_list.length - 1) / 2) * 48;
+      CTX.fillText(txt, w / 2, h / 2 + y_offset);
+      // CTX.fillText("Error loading image!", w / 2, h / 2 - 24);
+      // CTX.fillText(message, w / 2, h / 2 + 24);
+    }
+
+    // Set image to match canvas, so there is no size mismatch between elements
+    DOM.img.src = DOM.canvas.toDataURL()
+
+    return;
+  }
+
+  // ..................................................................................................................
+
+  function show_error_image(message = "Bad camera or snapshot?") {
+    return show_message_image(["Error loading image!", message]);
+  }
+
+  // ..................................................................................................................
+
+  async function GET_json(url, value_on_error = null, expected_status_code = 200) {
+
+    /* Helper used to handle simple GET requests that return json formatted data */
+
+    // Initialize output
+    let ok_req = false;
+    let response_json = value_on_error;
+
+    try {
+      const raw_response = await fetch(url);
+      if (raw_response.status === expected_status_code) {
+        response_json = await raw_response.json();
+        ok_req = true;
+      }
+
+    } catch {
+      console.warn("GET json failed!",`Response status: ${raw_response.status}`, `@ ${url}`);
+      console.log(raw_response)
+    }
+
+    return [ok_req, response_json];
+  }
+
+  // ..................................................................................................................
+
+  async function fetch_with_indicator(input, init) {
+
+    // Fetch with a change to the cursor
+    let error_on_fetch = null;
+    let response = null;
+
+    document.documentElement.classList.add(PAGECSS.waiting);
+    try {
+      response = await fetch(input, init);
+    } catch (e) {
+      error_on_fetch = e;
+    } finally {
+      document.documentElement.classList.remove(PAGECSS.waiting);
+    }
+
+    // Throw error after cleaning up cursor
+    const no_error = (error_on_fetch === null);
+    if (!no_error) {
+      throw error_on_fetch;
+    }
+
+    return response;
+  }
+
+  // ..................................................................................................................
+
+</script>
+
+</body>
+</html>

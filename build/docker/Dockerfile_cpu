@@ -1,0 +1,74 @@
+# -----------------------------------------------------------------------------
+#%% Base setup
+
+# Start with python base (3.10+)
+FROM python:3.11-bookworm
+
+
+# -----------------------------------------------------------------------------
+#%% Set pathing environment variables
+
+# Create a 'home' folder path to avoid storing everything in the root fs
+ENV HOME                        	/home
+ENV STORAGE_FOLDER_PATH 		$HOME/storage
+
+
+# -----------------------------------------------------------------------------
+#%% Download model files
+
+# Download GDINO-Tiny model
+ADD https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth \
+	$STORAGE_FOLDER_PATH/models/gdino/groundingdino_swint_ogc.pth
+
+# Download GDINO-Base model
+ADD https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha2/groundingdino_swinb_cogcoor.pth \
+	$STORAGE_FOLDER_PATH/models/gdino/groundingdino_swinb_cogcoor.pth
+
+
+# -----------------------------------------------------------------------------
+#%% Install system dependencies
+
+RUN apt-get update && \
+    apt-get install --quiet --assume-yes \
+    htop
+
+
+# -----------------------------------------------------------------------------
+#%% Setup python requirements
+
+COPY requirements/ req/
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install -r req/cpu_install.txt
+
+
+# -----------------------------------------------------------------------------
+#%% Set environment variables
+
+# Set variables for the main server
+ENV UVICORN_HOST             		0.0.0.0
+ENV UVICORN_PORT 			3834
+ENV UVICORN_LOG_LEVEL			warning
+
+
+# Set variables for accessing the database server
+ENV DBSERVER_URL 			http://localhost:8050
+
+
+# -----------------------------------------------------------------------------
+#%% Launch!
+
+# Copy remaining project files into image
+WORKDIR $HOME
+COPY . .
+
+# Make sure the entrypoint script is executable before calling it
+RUN chmod +x docker_entrypoint.sh
+ENTRYPOINT ["./docker_entrypoint.sh"]
+
+
+# -----------------------------------------------------------------------------
+# To use manually:
+
+# From the root project directory:
+# docker build -t todserver_image_cpu -f ./docker/Dockerfile .
+# docker run -d --network="host" --name todserver todserver_image_cpu

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="description" content="Text-based object detection home page" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/favicon.ico">
+  
+  <title>TOD Server</title>
+</head>
+
+<style>
+
+  body {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+    background: hsl(195, 15%, 30%);
+    color: white;
+    font-family: monospace;
+  }
+
+  .header_img {
+    margin-bottom: 3rem;
+  }
+
+  .column_elem {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 1rem;
+  }
+
+  .flex_centered {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  ul {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  a { 
+    color: white;
+    font-size: 1.5rem;
+  }
+  a:link, a:visited, a:active { text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .vertical_gap {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 5rem;
+  }
+
+</style>
+
+<body>
+
+  <h1 style="margin-bottom: 4rem;">Text-based Object Detection Server</h1>
+
+  <img class="header_img" src="/static/images/gdino.webp">
+
+  <div class="vertical_gap">
+    <ul class="column_elem flex_centered">
+      <a href="/redoc">Info</a>
+      <a href="/v0/demo">Demo</a>
+      <a href="/v0/settings">Settings</a>
+    </ul>
+
+  </div>
+
+</body>
+</html>

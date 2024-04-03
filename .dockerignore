@@ -1,0 +1,33 @@
+
+# Project files
+storage/
+ignore/
+build/
+README.md
+setup.py
+.dockerignore
+
+# Potential environment folders
+.venv/
+venv/
+.env/
+env/
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Large files (ex. videos and images)
+**.avi
+**.mp4
+**.mov
+**.jpg
+**.jpeg
+**.png
+
+# Cache files
+**.pyc
+__pycache__
+.mypy_cache/
+*.egg-info/

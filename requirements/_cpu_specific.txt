@@ -1,0 +1,6 @@
+
+# AI model dependencies (using cpu version)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch               >=2.2.0+cpu, <2.3.0+cpu
+transformers        >4.37.*, < 4.38.*
+

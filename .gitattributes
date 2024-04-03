@@ -1,0 +1,14 @@
+# Force Unix line endings on text files (i.e. convert crlf to lf)
+# Avoids Docker compatibility issues when using Windows
+# For more info: https://adaptivepatchwork.com/2012/03/01/mind-the-end-of-your-line/
+*.sh      text
+*.py      text
+*.md      text
+*.json    text
+
+# Don't try to correct image (binary) data
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.data    binary
+
