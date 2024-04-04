@@ -1,4 +1,4 @@
-# Text-Based Object Detectionv Server
+# Text-Based Object Detection Server
 
 Provides a server which allows for performing object detection based on text prompts. Runs on snapshot data from the [DBServer](https://github.com/pacefactory/scv2_dbserver).
 
@@ -15,13 +15,13 @@ To run the system using docker, first build the image using:
 ```bash
 bash build/docker/build_image.sh
 ```
-The build script will ask whether you want to use the CPU or GPU build. These result in different images (you can have both on your system simultaneously without conflict), but the GPU build is much larger (~4GB for the CPU build, ~10GB for the GPU build!), so it's best to only build the GPU image if you have a system that supports it!
+The build script will ask whether you want to use the CPU or GPU build. This choice results in different images (you can have both on your system simultaneously without conflict), but the GPU build is much larger (~4GB for the CPU build, ~10GB for the GPU build!), so it's best to only build the GPU image if you have a system that supports it!
 
 The image(s) can then be run using:
 ```bash
 bash build/docker/run_container.sh
 ```
-Again you'll be asked to choose between CPU and GPU versions when running this script. If you've built both versions, you can quickly swap between them using this script. However, you can't run both simultaneously, since they both map to the same container name and port.
+Again you'll be asked to choose between CPU and GPU versions when running this script. If you've built both versions, you can quickly swap between them using this script. However, you can't run both simultaneously, since they both map to the same container name and port. If you do want to test GPU vs. CPU performance, there is an option to toggle GPU usage on the server settings page (when running the GPU build).
 
 By default, the container will launch the server on port `3834`.
 
@@ -86,8 +86,8 @@ The server is conceptually very simple. It takes a text prompt (e.g. 'person') a
 
 The main functionality comes from a single route: `/v0/detect`, which requires a POST request with a body of the form:
 
+#### Example POST Body
 ```json
-# Example POST Body
 {
     "camera_select": "camera_name",
     "snapshot_ems": 123456789123,
@@ -98,12 +98,12 @@ The main functionality comes from a single route: `/v0/detect`, which requires a
 ```
 
 From this request, the server will return results in the form:
+#### Example detection response
 ```json
-# Example detection response
 {
     "text_prompt": "person. forklift. pizza. alien",
     "boxes_xywh_norm": [
-        [0.302, 0.462, 0.038, 0.054], # x-center, y-center, width, height
+        [0.302, 0.462, 0.038, 0.054],
         [0.146, 0.625, 0.139, 0.131]
     ],
     "labels": ["person","alien"],
@@ -111,5 +111,6 @@ From this request, the server will return results in the form:
     "time_taken_ms": 54
 }
 ```
+**Note:** Bounding boxes use x-center, y-center, width, height (not top-left xy!)
 
 More detailed information is available on the server documentation page, accessible from the `/redoc` or `/docs` urls, or from the 'info' link on the server home page.
