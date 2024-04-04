@@ -3,9 +3,8 @@
 Provides a server which allows for performing object detection based on text prompts. Runs on snapshot data from the [DBServer](https://github.com/pacefactory/scv2_dbserver).
 
 <p align="center">
-  <img src=".readme_assets/turtle_example.webp">
+  <img src=".readme_assets/demo_screenshot.webp">
 </p>
-
 
 Currently uses [Grounding DINO](https://github.com/IDEA-Research/GroundingDINO), though other models exist and may be worth incorporating in the future (see [NanoOwl](https://github.com/NVIDIA-AI-IOT/nanoowl) and [YOLO-World](https://github.com/AILab-CVC/YOLO-World) for example).
 
