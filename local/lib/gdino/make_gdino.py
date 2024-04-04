@@ -127,10 +127,14 @@ class GDINOLoader:
         '''
         
         # Get the model file with the most recent modification time
-        file_lut = self.get_file_name_to_path_lut()        
+        file_lut = self.get_file_name_to_path_lut()
         file_names = file_lut.keys()
+        models_exist = len(file_names) > 0
+        if not models_exist:
+            print("", "ERROR! Cannot load active model, no files exist!", sep="\n", flush=True)
+        
         get_file_mod_time = lambda file_name: osp.getmtime(file_lut.get(file_name,0))
-        active_name = max(file_names, key = get_file_mod_time)
+        active_name = max(file_names, key = get_file_mod_time) if models_exist else None
         
         return active_name
     

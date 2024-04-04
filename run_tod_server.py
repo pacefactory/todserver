@@ -59,7 +59,7 @@ if __name__ == "__main__":
         "",
         "Running Text-based Object Detection Server in debug mode!",
         "If you meant to run this outside of debug mode, use the command:",
-        f"uvicorn {uvicorn_launch_command} --port {port}",
+        f"uvicorn {uvicorn_launch_command} --host {host} --port {port}",
         "",
         sep="\n",
     )

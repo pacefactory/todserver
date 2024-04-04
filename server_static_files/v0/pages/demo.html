@@ -430,6 +430,10 @@
   This low value tends to give many detections, which can then be filtered
   for viewing using the confidence slider. However, it can be modified:
     LOWER_CONFIDENCE_BOUND = ${LOWER_CONFIDENCE_BOUND}
+  
+  After making a detection request, you can click on parts of the image
+  that have no detections to highlight detections that include the
+  clicked point, but were below the current confidence threshold.
   `);
   
   
@@ -865,9 +869,14 @@
       // Warn if we don't get the expected status code
       const ok_response = (response.status === 200);
       if (!ok_response) {
+        const missing_model = (response.status === 503);
         console.error("Detection request error!", response);
         console.error("Error response:", response_json);
-        alert("Error requesting detection!");
+        if (missing_model) {
+          alert("Error requesting detection! Model files not available?");
+        } else {
+          alert("Error requesting detection!");
+        }
       } else {
 
         // Write out time taken

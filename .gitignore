@@ -16,3 +16,8 @@ ignore
 
 # Editable install folder (created from setup.py)
 *.egg-info/
+
+# Model weights
+*.pt
+*.pth
+

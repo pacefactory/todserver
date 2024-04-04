@@ -57,10 +57,11 @@ def get_model_select_info(model_loader_ref):
     ''' Function used to provide consistently formatted model selection results '''
     
     active_file = model_loader_ref.get_active_file()
+    has_model_select = active_file is not None
     file_lut = model_loader_ref.get_file_name_to_path_lut()
     model_files_list = list(file_lut.keys())
     
-    return active_file, model_files_list
+    return has_model_select, active_file, model_files_list
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -115,7 +116,10 @@ def v0_settings_get_current_model_route() -> ModelSelectResponse:
     as well as list out all other model options
     '''
     
-    model_select, model_files_list = get_model_select_info(MODEL_LOADER)
+    has_model_select, model_select, model_files_list = get_model_select_info(MODEL_LOADER)
+    if not has_model_select:
+        raise server_error_exception("Error! No model selected (missing model files?)", 503)
+    
     return ModelSelectResponse(dmodel_select=model_select, dmodel_list=model_files_list)
 
 # .....................................................................................................................
@@ -131,7 +135,10 @@ def v0_settings_set_model_route(post_body: ModelSelectRequest) -> ModelSelectRes
     if not ok_set:
         raise server_error_exception("Error setting new model!")
     
-    model_select, model_files_list = get_model_select_info(MODEL_LOADER)
+    has_model_select, model_select, model_files_list = get_model_select_info(MODEL_LOADER)
+    if not has_model_select:
+        raise server_error_exception("Error! No model selected (missing model files?)", 503)
+    
     return ModelSelectResponse(dmodel_select=model_select, dmodel_list=model_files_list)
 
 # .....................................................................................................................
