@@ -178,3 +178,17 @@ def v0_settings_set_model_device_route(post_body: ModelDeviceRequest) -> ModelDe
     model_device_str, model_dtype_str = model.set_device(device_str_to_use, post_body.dtype)
     
     return ModelDeviceResponse(has_gpu=has_gpu, device=model_device_str, dtype=model_dtype_str)
+
+# .....................................................................................................................
+
+@settings_router.get("/reclaim-resources", status_code=201)
+def v0_settings_reclaim_resources_route(force: bool = False) -> bool:
+    
+    '''
+    Route used to unload model resources (e.g to reduce RAM usage) if not in use recently
+    Can supply 'force' parameter to forcefully unload the model if needed
+    '''
+    
+    is_unloaded = MODEL_LOADER.unload_model_if_unused_recently(force)
+    
+    return is_unloaded
