@@ -10,6 +10,8 @@ import os.path as osp
 
 import torch
 
+from local.environment import get_auto_unload_timeout_sec
+from local.lib.timekeeper_utils import get_utc_datetime, add_seconds_to_datetime
 from local.lib.cpugpu_device import clear_cpugpu_memory, check_device_availability
 
 from local.lib.gdino.gdino_model import GDinoModel
@@ -23,7 +25,8 @@ from local.lib.gdino.text_image_transformer import TextAndImageTransformer
 
 class GDINOLoader:
     
-    _allowable_file_exts = {".pt", ".pth"}
+    _ALLOWABLE_FILE_EXTS = {".pt", ".pth"}
+    _UNLOAD_WAIT_TIME_SEC = get_auto_unload_timeout_sec()
     
     # .................................................................................................................
     
@@ -38,6 +41,7 @@ class GDINOLoader:
         self._has_gpu = has_gpu
         self._device_on_load_str = fastest_device_str 
         
+        self._last_access_dt = None
         self._model = None
         if load_on_start:
             self.load_active_model()
@@ -46,13 +50,22 @@ class GDINOLoader:
     
     # .................................................................................................................
     
+    def is_model_loaded(self) -> bool:
+        return (self._model is not None)
+    
+    # .................................................................................................................
+    
     def get_model(self) -> tuple[bool, GDinoModel | None]:
         
         # Re-load model if needed
-        if self._model is None:
+        if not self.is_model_loaded():
             self.load_active_model()
         
-        ok_model = self._model is not None
+        # Update access time, to indicate model is being used
+        ok_model = self.is_model_loaded()
+        if ok_model:
+            self._last_access_dt = get_utc_datetime()
+        
         return ok_model, self._model
     
     # .................................................................................................................
@@ -72,7 +85,7 @@ class GDINOLoader:
         
         # Get listing of model files
         files_list = os.listdir(self._folder_path)
-        model_files_list = [f for f in files_list if osp.splitext(f)[1] in self._allowable_file_exts]
+        model_files_list = [f for f in files_list if osp.splitext(f)[1] in self._ALLOWABLE_FILE_EXTS]
         
         # Get listing of lowercase filenames (without ext) with mapping to file pathing for output
         model_files_no_ext_list = [self._clean_file_name(f) for f in model_files_list]
@@ -93,6 +106,7 @@ class GDINOLoader:
             self.unload_model()
             self._model = make_gdino_from_model_path(model_file_path)
             self._model.set_device(self._device_on_load_str)
+            self._last_access_dt = get_utc_datetime()
         
         return ok_file
     
@@ -102,19 +116,48 @@ class GDINOLoader:
         active_file_name = self.get_active_file()
         return self.load_model(active_file_name)
     
+    
     # .................................................................................................................
     
     def unload_model(self) -> None:
         
         ''' Function used to recover resources in use by the model '''
         
-        if self._model is not None:
+        if self.is_model_loaded():
             self._device_on_load_str, _ = self._model.get_device_str()
             self._model.unload_resources()
             self._model = None
+            self._last_access_dt = None
             clear_cpugpu_memory()
         
         return
+    
+    # .................................................................................................................
+    
+    def unload_model_if_unused_recently(self, force_unload = False) -> bool:
+        
+        '''
+        Helper used to only unload resources when not in use
+        Returns True if the model was unloaded (but False if the model was already unloaded!)
+        '''
+        
+        # Keep track of initial state for reporting changes
+        model_was_loaded = self.is_model_loaded()
+        
+        # Check if it's been 'too long' since last use
+        have_access_time = self._last_access_dt is not None
+        if have_access_time:
+            curr_dt = get_utc_datetime()
+            unused_cutoff_dt = add_seconds_to_datetime(self._last_access_dt, self._UNLOAD_WAIT_TIME_SEC)
+            is_unused = curr_dt > unused_cutoff_dt
+            if is_unused or force_unload:
+                self.unload_model()
+        
+        # Report whether an unload event actually occurred
+        model_no_longer_loaded = not self.is_model_loaded()
+        unloaded_model = model_was_loaded and model_no_longer_loaded
+        
+        return unloaded_model
     
     # .................................................................................................................
     

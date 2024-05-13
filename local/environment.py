@@ -28,6 +28,18 @@ def get_todserver_host() -> str:
 def get_todserver_port() -> int:
     return int(os.environ.get("UVICORN_PORT", 3834))
 
+def get_todserver_url() -> str:
+    host = get_todserver_host()
+    port = get_todserver_port()
+    return f"http://{host}:{port}"
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+#%% Cleanup env
+
+def get_auto_unload_timeout_sec() -> int:
+    return int(os.environ.get("MODEL_AUTO_UNLOAD_TIMEOUT_SEC", 10 * 60))
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 #%% DBServer env
@@ -47,6 +59,8 @@ if __name__ == "__main__":
     print("")
     print("TODSERVER_HOST", get_todserver_host())
     print("TODSERVER_PORT", get_todserver_port())
+    print("")
+    print("MODEL_AUTO_UNLOAD_TIMEOUT_SEC", get_auto_unload_timeout_sec())
     print("")
     print("DBSERVER_URL", get_dbserver_base_url())
     print("")
