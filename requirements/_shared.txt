@@ -1,10 +1,8 @@
 
 # Server dependencies
-fastapi			==0.110.*
+fastapi			==0.111.*
 uvicorn[standard]	==0.29.*
-starlette		==0.37.*
-pydantic 		==2.6.*
-python-multipart 	==0.0.6
+pydantic 		==2.7.*
 
 # For making get/post requests to dbserver
 requests 		==2.31.*

@@ -10,6 +10,8 @@ from typing import Any
 import requests
 import requests.exceptions as reqexcept
 
+from fastapi.encoders import jsonable_encoder
+
 from local.lib.timekeeper_utils import timestamped_str
 
 

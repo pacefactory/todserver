@@ -61,13 +61,13 @@ Note that model downloads are only neccesary when running the server locally! Th
 The server can be launched in a development-friendly mode by directly running the python server script:
 ```bash
 # Run server in development mode (uses default settings + auto-reloads)
-python run_tod_server.py
+python run_todserver.py
 ```
 
 For more direct control, you can use the `uvicorn` command:
 ```bash
 # Run server with custom configs
-uvicorn run_tod_server:asgi_app --host 0.0.0.0 --port 3834 # --log-level debug --reload
+uvicorn run_todserver:asgi_app --host 0.0.0.0 --port 3834 # --log-level debug --reload
 ```
 
 ### Development extras
@@ -114,3 +114,7 @@ From this request, the server will return results in the form:
 **Note:** Bounding boxes use x-center, y-center, width, height (not top-left xy!)
 
 More detailed information is available on the server documentation page, accessible from the `/redoc` or `/docs` urls, or from the 'info' link on the server home page.
+
+## TODOs
+- Add thread lock around model usage
+- Remove huggingface dependency (i.e. include BERT text-encoder directly in repo)
